@@ -1,0 +1,20 @@
+{
+  "name": "gitlab-webhook-handler",
+  "version": "0.1.0",
+  "description": "Express middleware to handle Gitlab Webhook requests ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "gitlab",
+    "webhook",
+    "middleware",
+    "express"
+  ],
+  "author": "Nicholas Penree <nick@penree.com>",
+  "license": "MIT",
+  "dependencies": {
+    "debug": "~0.7.2"
+  }
+}
