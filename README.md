@@ -2,12 +2,13 @@
 
 ### Install
 
-    > npm install gitlab-webhook
+    $ npm install gitlab-webhook
     
 ### Usage
 
 ```javascript
 var express = require('express');
+var http = require('http');
 var webhook = require('gitlab-webhook');
 ...
 var app = express();
