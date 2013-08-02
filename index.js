@@ -1,5 +1,5 @@
 /*!
- * Gitlab Webook Handler Middleware
+ * Gitlab Webhook Handler Middleware
  * Copyright(c) 2013 Nicholas Penree <nick@penree.com>
  * MIT Licensed
  */
@@ -8,11 +8,27 @@
 
 var isArray = require('util').isArray;
 var exec = require('child_process').exec;
-var debug = require('debug')('gitlab-webook')
+var debug = require('debug')('gitlab-webhook');
 var express = require('express');
-var app = express.application
+var app = express.application;
+
+/**
+ * Execute a command when an authenticated webhook POSTs for an allowed branch.
+ *
+ * Options:
+ *   - param {String} name of parameter of token
+ *   - token {String} content of token to match
+ *   - branches {String|Array} name of branches to allow or * for all
+ *   - exec {String} command to run if allowed
+ *
+ * @param {Options} opts
+ * @return {Function}
+ * @api public
+ */
 
 exports = module.exports = function(opts) {
+  opts = opts || {};
+  
   return function(req, res) {
     var param = opts.param || 'token';
     var token = req.param(param);
@@ -53,6 +69,21 @@ exports = module.exports = function(opts) {
     }
   };
 };
+
+/**
+ * Execute a command when an authenticated webhook POSTs for an allowed branch.
+ *
+ * Options:
+ *   - param {String} name of parameter of token (default: token)
+ *   - token {String} content of token to match
+ *   - branches {String|Array} name of branches to allow or * for all
+ *   - exec {String} command to run if allowed (default: git pull <branch>)
+ *
+ * @param {String} route
+ * @param {Options} opts
+ * @return {Function}
+ * @api public
+ */
 
 app.gitlab = function(route, opts) {
   return app.post(route, exports(opts));
