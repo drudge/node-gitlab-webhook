@@ -18,7 +18,8 @@ var app = express.application;
  * Options:
  *   - param {String} name of parameter of token
  *   - token {String} content of token to match
- *   - branches {String|Array} name of branches to allow or * for all
+ *   - branches {String|Array} list of branches to allow or * for all
+ *   - ips {String|Array} list of ip addresses to allow or * for all
  *   - exec {String} command to run if allowed
  *
  * @param {Options} opts
@@ -34,17 +35,28 @@ exports = module.exports = function(opts) {
     var token = req.param(param);
     var payload = req.body || {};
     var branches = opts.branches || [];
+    var ips = opts.ips || [];
     var ref = payload.ref;
+    var ip = req.ip;
     var cmd = opts.exec || 'git pull ' + ref;
     
     branches = isArray(branches)? branches : [branches];
+    ips = isArray(ips)? ips : [ips];
     
-    if (token !== opts.token) {
-      debug('%s "%s" does not match, denying access', param, token);
+    debug('new hook request from %s for %s', ip, ref);
+    
+    if (ips.indexOf('*') === -1 && ips.indexOf(ip) === -1) {
+      debug('%s not found in allowed ips: %s', ip, ips.join(', '));
       res.status(404);
       return res.end();
     }
-        
+    
+    if (token !== opts.token) {
+      debug('%s "%s" does not match', param, token);
+      res.status(404);
+      return res.end();
+    }
+    
     if (branches.indexOf('*') === -1 && branches.indexOf(ref) === -1) {
       debug('%s not found in allowed branches: %s', ref, branches.join(', '));
       res.status(403);
@@ -76,7 +88,8 @@ exports = module.exports = function(opts) {
  * Options:
  *   - param {String} name of parameter of token (default: token)
  *   - token {String} content of token to match
- *   - branches {String|Array} name of branches to allow or * for all
+ *   - branches {String|Array} list of branches to allow or * for all
+ *   - ips {String|Array} list of ip addresses to allow or * for all
  *   - exec {String} command to run if allowed (default: git pull <branch>)
  *
  * @param {String} route
