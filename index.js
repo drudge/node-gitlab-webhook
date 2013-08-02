@@ -16,12 +16,13 @@ var app = express.application;
  * Execute a command when an authenticated webhook POSTs for an allowed branch.
  *
  * Options:
- *   - param {String} name of parameter of token
- *   - token {String} content of token to match
- *   - branches {String|Array} list of branches to allow or * for all
- *   - ips {String|Array} list of ip addresses to allow or * for all
- *   - exec {String} command to run if allowed
+ *   - param {String} name of parameter of token (default: token)
+ *   - token {String} content of token to match (default: none)
+ *   - branches {String|Array} list of branches to allow (default: *)
+ *   - ips {String|Array} list of ip addresses to allow (default: 127.0.0.1)
+ *   - exec {String} command to run if allowed (default: git pull <branch>)
  *
+ * @param {String} route
  * @param {Options} opts
  * @return {Function}
  * @api public
@@ -34,8 +35,8 @@ exports = module.exports = function(opts) {
     var param = opts.param || 'token';
     var token = req.param(param);
     var payload = req.body || {};
-    var branches = opts.branches || [];
-    var ips = opts.ips || [];
+    var branches = opts.branches || ['*'];
+    var ips = opts.ips || ['127.0.0.1'];
     var ref = payload.ref;
     var ip = req.ip;
     var cmd = opts.exec || 'git pull ' + ref;
@@ -87,9 +88,9 @@ exports = module.exports = function(opts) {
  *
  * Options:
  *   - param {String} name of parameter of token (default: token)
- *   - token {String} content of token to match
- *   - branches {String|Array} list of branches to allow or * for all
- *   - ips {String|Array} list of ip addresses to allow or * for all
+ *   - token {String} content of token to match (default: none)
+ *   - branches {String|Array} list of branches to allow (default: *)
+ *   - ips {String|Array} list of ip addresses to allow (default: 127.0.0.1)
  *   - exec {String} command to run if allowed (default: git pull <branch>)
  *
  * @param {String} route
