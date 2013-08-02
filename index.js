@@ -8,7 +8,9 @@
 
 var isArray = require('util').isArray;
 var exec = require('child_process').exec;
-var debug = require('debug')('gitlab-webook-handler')
+var debug = require('debug')('gitlab-webook')
+var express = require('express');
+var app = express.application
 
 exports = module.exports = function(opts) {
   return function(req, res) {
@@ -19,13 +21,14 @@ exports = module.exports = function(opts) {
     var ref = payload.ref;
     var cmd = opts.exec || 'git pull ' + ref;
     
+    branches = isArray(branches)? branches : [branches];
+    
     if (token !== opts.token) {
       debug('%s "%s" does not match, denying access', param, token);
       res.status(404);
       return res.end();
     }
-    branches = isArray(branches)? branches : [branches];
-    
+        
     if (branches.indexOf('*') === -1 && branches.indexOf(ref) === -1) {
       debug('%s not found in allowed branches: %s', ref, branches.join(', '));
       res.status(403);
@@ -34,7 +37,7 @@ exports = module.exports = function(opts) {
     
     debug('%s allowed', ref);
     try {
-      exec(cmd, function(err, stdout, stderr) {
+      exec(cmd, function(err) {
         if (err) {
           debug('error executing `' + cmd + '`: ' + err.message);
           res.send(500);
@@ -49,4 +52,8 @@ exports = module.exports = function(opts) {
       return res.end();
     }
   };
+};
+
+app.gitlab = function(route, opts) {
+  return app.post(route, exports(opts));
 };
