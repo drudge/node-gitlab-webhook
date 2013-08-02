@@ -64,14 +64,18 @@ exports = module.exports = function(opts) {
       return res.end();
     }
     
-    debug('%s allowed', ref);
+    debug('%s branch allowed', ref);
     try {
-      exec(cmd, function(err) {
+      debug('$ ' + cmd);
+      exec(cmd, function(err, stdout, stderr) {
         if (err) {
-          debug('error executing `' + cmd + '`: ' + err.message);
+          debug('execute failed: ' + err.message);
           res.send(500);
           return res.end();
         }
+        
+        if (stdout) debug('stdout: ' + stdout.trim());
+        if (stderr) debug('stderr: ' + stderr.trim());
         
         res.send(200);
         return res.end();
@@ -83,6 +87,15 @@ exports = module.exports = function(opts) {
   };
 };
 
+/**
+ * Expose HTTP
+ */
+
+module.exports.http = function(opts) {
+  opts = opts || {};  
+  return express().gitlab(opts.route || '/gitlab-hook', opts);
+}
+ 
 /**
  * Execute a command when an authenticated webhook POSTs for an allowed branch.
  *
@@ -100,5 +113,5 @@ exports = module.exports = function(opts) {
  */
 
 app.gitlab = function(route, opts) {
-  return app.post(route, exports(opts));
+  return this.post(route, [express.bodyParser(), exports(opts)]);
 };
