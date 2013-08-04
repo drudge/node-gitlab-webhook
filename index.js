@@ -12,6 +12,20 @@ var debug = require('debug')('gitlab-webhook');
 var express = require('express');
 var app = express.application;
 
+var processCommand = function(cmd, params) {
+  params = params || {};
+  var keys = Object.keys(params);
+  var procCmd = cmd;
+  
+  if (keys.length) {
+    keys.forEach(function(key) {
+      var expr = new RegExp('\{\{' + key + '\}\}', 'g');
+      procCmd = procCmd.replace(expr, params[key]);
+    });
+  }
+  
+  return procCmd;
+};
 /**
  * Execute a command when an authenticated webhook POSTs for an allowed branch.
  *
@@ -66,6 +80,7 @@ exports = module.exports = function(opts) {
     
     debug('%s branch allowed', ref);
     try {
+      var cmd = processCommand(cmd, payload);
       debug('$ ' + cmd);
       exec(cmd, function(err, stdout, stderr) {
         if (err) {
@@ -92,7 +107,7 @@ exports = module.exports = function(opts) {
  */
 
 module.exports.http = function(opts) {
-  opts = opts || {};  
+  opts = opts || {};
   return express().gitlab(opts.route || '/gitlab-hook', opts);
 }
  
