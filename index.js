@@ -12,21 +12,27 @@ var debug = require('debug')('gitlab-webhook');
 var express = require('express');
 var app = express.application;
 
+/**
+ * Given a string `cmd`, replace all values in {{}} with the matching value.
+ *
+ * @param {String} cmd
+ * @param {Object} params
+ * @return {String}
+ * @api private
+ */
+
 var processCommand = function(cmd, params) {
   params = params || {};
-  var re = /{{([{>?!#]*([\w.]*)(?:[:=~>\w.]+)?)}}(?:([\s\S]+?){{\/\2}})?/gm;
+  var re = /{{([^{{}}]+)}}/gm;
   var match;
   var keys = [];
   while ((match = re.exec(cmd))) keys.push(match[1]);
   if (keys.length) {
     keys.forEach(function(key) {
       var segs = key.split('.');
-      var subparams = params;
-      while (segs.length) {
-        var subkey = segs.shift();
-        subparams = subparams[subkey];
-      }
-      cmd = cmd.replace(new RegExp('{{' + key + '}}', 'g'), subparams);
+      var sub = params;
+      while (segs.length) sub = sub[segs.shift()];
+      cmd = cmd.replace(new RegExp('{{' + key + '}}', 'mg'), sub);
     });
   }
   return cmd;
