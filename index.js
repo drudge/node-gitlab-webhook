@@ -14,18 +14,24 @@ var app = express.application;
 
 var processCommand = function(cmd, params) {
   params = params || {};
-  var keys = Object.keys(params);
-  var procCmd = cmd;
-  
+  var re = /{{([{>?!#]*([\w.]*)(?:[:=~>\w.]+)?)}}(?:([\s\S]+?){{\/\2}})?/gm;
+  var match;
+  var keys = [];
+  while ((match = re.exec(cmd))) keys.push(match[1]);
   if (keys.length) {
     keys.forEach(function(key) {
-      var expr = new RegExp('\{\{' + key + '\}\}', 'g');
-      procCmd = procCmd.replace(expr, params[key]);
+      var segs = key.split('.');
+      var subparams = params;
+      while (segs.length) {
+        var subkey = segs.shift();
+        subparams = subparams[subkey];
+      }
+      cmd = cmd.replace(new RegExp('{{' + key + '}}', 'g'), subparams);
     });
   }
-  
-  return procCmd;
+  return cmd;
 };
+
 /**
  * Execute a command when an authenticated webhook POSTs for an allowed branch.
  *
