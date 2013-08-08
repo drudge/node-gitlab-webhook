@@ -7,7 +7,7 @@
 'use strict';
 
 var isArray = require('util').isArray;
-var exec = require('child_process').exec;
+var spawn = require('child_process').spawn;
 var debug = require('debug')('gitlab-webhook');
 var express = require('express');
 var app = express.application;
@@ -35,7 +35,11 @@ var processCommand = function(cmd, params) {
       cmd = cmd.replace(new RegExp('{{' + key + '}}', 'mg'), sub);
     });
   }
-  return cmd;
+  var comps = cmd.split(' ');
+  return {
+    cmd: comps.shift(),
+    params: comps
+  };
 };
 
 /**
@@ -58,6 +62,7 @@ exports = module.exports = function(opts) {
   opts = opts || {};
   
   return function(req, res) {
+    var self = this;
     var param = opts.param || 'token';
     var token = req.param(param);
     var payload = req.body || {};
@@ -66,6 +71,7 @@ exports = module.exports = function(opts) {
     var ref = payload.ref;
     var ip = req.ip;
     var cmd = opts.exec || 'git pull ' + ref;
+    var opts.log = opts.log || './logs/deploy.log';
     
     branches = isArray(branches)? branches : [branches];
     ips = isArray(ips)? ips : [ips];
@@ -92,21 +98,16 @@ exports = module.exports = function(opts) {
     
     debug('%s branch allowed', ref);
     try {
-      var cmd = processCommand(cmd, payload);
-      debug('$ ' + cmd);
-      exec(cmd, function(err, stdout, stderr) {
-        if (err) {
-          debug('execute failed: ' + err.message);
-          res.send(500);
-          return res.end();
-        }
-        
-        if (stdout) debug('stdout: ' + stdout.trim());
-        if (stderr) debug('stderr: ' + stderr.trim());
-        
-        res.send(200);
-        return res.end();
+      var run = processCommand(cmd, payload);
+      var out = fs.createWriteStream(self.log, { flags: 'a', encoding: 'utf8'; });
+      debug('$ ' + run.cmd + ' ' + cmd.params.join(' '));
+      var child = spawn(run.cmd, cmd.params, {
+        detached: true,
+        stdio: [ 'ignore', out, out ]
       });
+      child.unref();
+      res.send(200);
+      return res.end();
     } catch (err) {
       res.send(500);
       return res.end();
