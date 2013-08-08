@@ -5,7 +5,7 @@ var webhook = require('../');
 var app = express();
 
 app.gitlab('/123-gitlab-hook', {
-  exec: 'echo "hi"',
+  exec: 'git pull && npm install && stop my-app && start my-app',
   token: 'CA572F1C-7BEB-467E-B26F-8999AB09CD4C',
   branches: 'refs/heads/production'
 });

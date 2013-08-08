@@ -8,6 +8,7 @@
 
 var isArray = require('util').isArray;
 var spawn = require('child_process').spawn;
+var createWriteStream = require('fs').createWriteStream;
 var debug = require('debug')('gitlab-webhook');
 var express = require('express');
 var app = express.application;
@@ -15,13 +16,18 @@ var app = express.application;
 /**
  * Given a string `cmd`, replace all values in {{}} with the matching value.
  *
+ * An object is returned with two keys:
+ * 
+ *  - `cmd` {String} The base command to execute
+ *  - 'args' {Array} Any arguments to pass to the `cmd`
+ *
  * @param {String} cmd
  * @param {Object} params
- * @return {String}
+ * @return {Object}
  * @api private
  */
 
-var processCommand = function(cmd, params) {
+var prepareCommand = function(cmd, params) {
   params = params || {};
   var re = /{{([^{{}}]+)}}/gm;
   var match;
@@ -38,7 +44,7 @@ var processCommand = function(cmd, params) {
   var comps = cmd.split(' ');
   return {
     cmd: comps.shift(),
-    params: comps
+    args: comps
   };
 };
 
@@ -51,6 +57,7 @@ var processCommand = function(cmd, params) {
  *   - branches {String|Array} list of branches to allow (default: *)
  *   - ips {String|Array} list of ip addresses to allow (default: 127.0.0.1)
  *   - exec {String} command to run if allowed (default: git pull <branch>)
+ *   - log {String} path of file to log output of execution to (default: ./logs/deploy.log)
  *
  * @param {String} route
  * @param {Options} opts
@@ -62,7 +69,6 @@ exports = module.exports = function(opts) {
   opts = opts || {};
   
   return function(req, res) {
-    var self = this;
     var param = opts.param || 'token';
     var token = req.param(param);
     var payload = req.body || {};
@@ -71,7 +77,7 @@ exports = module.exports = function(opts) {
     var ref = payload.ref;
     var ip = req.ip;
     var cmd = opts.exec || 'git pull ' + ref;
-    var opts.log = opts.log || './logs/deploy.log';
+    var log = opts.log || './logs/deploy.log';
     
     branches = isArray(branches)? branches : [branches];
     ips = isArray(ips)? ips : [ips];
@@ -98,17 +104,25 @@ exports = module.exports = function(opts) {
     
     debug('%s branch allowed', ref);
     try {
-      var run = processCommand(cmd, payload);
-      var out = fs.createWriteStream(self.log, { flags: 'a', encoding: 'utf8'; });
-      debug('$ ' + run.cmd + ' ' + cmd.params.join(' '));
-      var child = spawn(run.cmd, cmd.params, {
-        detached: true,
-        stdio: [ 'ignore', out, out ]
+      var run = prepareCommand(cmd, payload);
+      var out = createWriteStream(log, { flags: 'a', encoding: 'utf8' });
+      debug('$ ' + run.cmd + ' ' + run.args.join(' '));
+      out.once('error', function(err) {
+        debug('error: ' + err.message);
+        res.send(500);
+        return res.end();
       });
-      child.unref();
-      res.send(200);
-      return res.end();
+      out.once('open', function() {
+        var child = spawn(run.cmd, run.args, {
+          detached: true,
+          stdio: [ 'ignore', out, out ]
+        });
+        child.unref();
+        res.send(200);
+        return res.end();
+      });
     } catch (err) {
+      debug('error: ' + err.message);
       res.send(500);
       return res.end();
     }
@@ -133,6 +147,7 @@ module.exports.http = function(opts) {
  *   - branches {String|Array} list of branches to allow (default: *)
  *   - ips {String|Array} list of ip addresses to allow (default: 127.0.0.1)
  *   - exec {String} command to run if allowed (default: git pull <branch>)
+ *   - log {String} path of file to log output of execution to (default: ./logs/deploy.log)
  *
  * @param {String} route
  * @param {Options} opts
@@ -140,6 +155,7 @@ module.exports.http = function(opts) {
  * @api public
  */
 
+app.github =
 app.gitlab = function(route, opts) {
   return this.post(route, [express.bodyParser(), exports(opts)]);
 };
