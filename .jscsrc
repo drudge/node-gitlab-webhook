@@ -1,0 +1,15 @@
+{
+    "preset": "google",
+
+    "validateJSDoc": {
+        "checkParamNames": true,
+        "checkRedundantParams": true,
+        "requireParamTypes": true
+    },
+
+    "excludeFiles": [
+        "**/.AppleDouble/**",
+        "node_modules/**",
+        "tmp/**"
+    ]
+}
