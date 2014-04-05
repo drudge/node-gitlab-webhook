@@ -1,6 +1,6 @@
 {
   "name": "gitlab-webhook",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Express middleware to handle Github/Gitlab Webhook requests",
   "main": "index.js",
   "scripts": {
